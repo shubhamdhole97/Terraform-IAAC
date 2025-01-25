@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'  // Specify your desired region
-        GITHUB_REPO = 'https://github.com/shubhamdhole97/kkdd.git'  // GitHub repository URL
+        GITHUB_REPO = 'https://github.com/shubhamdhole97/Terraform-IAAC.git'  // GitHub repository URL
     }
 
     stages {
