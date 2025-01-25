@@ -1,0 +1,96 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_DEFAULT_REGION = 'us-east-1'  // Specify your desired region
+        GITHUB_REPO = 'https://github.com/shubhamdhole97/kkdd.git'  // GitHub repository URL
+    }
+
+    stages {
+        // Stage 1: Clone msexcel repo
+        stage('01.Clone Repo') {
+            steps {
+                echo "Git Cloning for msexcel"
+                git url: 'https://github.com/shubhamdhole97/msexcel.git', branch: 'main'
+            }
+        }
+
+        // Stage 2: Clean and Package for msexcel
+        stage('02.Clean') {
+            steps {
+                echo "Cleaning msexcel project"
+                sh 'mvn clean'
+            }
+        }
+
+        stage('03.Package') {
+            steps {
+                echo "Packaging msexcel project"
+                sh 'mvn package'
+            }
+        }
+
+        // Stage 3: Deploy msexcel to Nexus
+        stage('04.Deploy to Nexus') {
+            steps {
+                echo "Deploy to Nexus"
+                sh 'curl -v -u admin:admin --upload-file target/msexcel-0.0.1-SNAPSHOT.jar http://localhost:8081/repository/abcd/com/msoffice/msexcel/0.0.1/msexcel-0.0.1-SNAPSHOT.jar'
+            }
+        }
+
+        // Stage 4: Clone Terraform Repo
+        stage('Clone GitHub Repo for Terraform') {
+            steps {
+                echo "Git Cloning for Terraform"
+                git url: "${GITHUB_REPO}", branch: 'main'
+            }
+        }
+
+        // Stage 5: Initialize Terraform
+        stage('Initialize Terraform') {
+            steps {
+                script {
+                    echo "Initializing Terraform"
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        // Stage 6: Terraform Plan
+        stage('Terraform Plan') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: '123']]) {
+                    script {
+                        echo "Running Terraform Plan"
+                        def planCmd = 'terraform plan -out=tfplan'
+                        def result = sh(script: planCmd, returnStdout: true).trim()
+                        echo "Terraform plan result: ${result}"
+                    }
+                }
+            }
+        }
+
+        // Stage 7: Run Terraform Apply
+        stage('Terraform Apply') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: '123']]) {
+                    script {
+                        echo "Running Terraform Apply"
+                        def applyCmd = 'terraform apply -auto-approve tfplan'
+                        def result = sh(script: applyCmd, returnStdout: true).trim()
+                        echo "Terraform apply result: ${result}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
